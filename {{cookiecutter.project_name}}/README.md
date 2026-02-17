@@ -431,17 +431,98 @@ Coverage reports generated in `reports/htmlcov/`. Current coverage shown in badg
 
 ## CI/CD
 
-### GitHub Actions Workflows
+This project uses **reusable GitHub Actions workflows** from the public [`jonathanvanleeuwen/cicd_github`](https://github.com/jonathanvanleeuwen/cicd_github) repository for automated testing, versioning, and releases.
 
-1. **Pull Request Checks** (`.github/workflows/python-app.yml`)
-   - Run pre-commit hooks
-   - Run pytest with coverage
-   - Lint with ruff
+### What Happens on Merge to Main
 
-2. **Release Pipeline** (`.github/workflows/semantic-release.yml`)
-   - Update coverage badge in README
-   - Semantic versioning based on commit messages
-   - Build and publish wheel to GitHub Releases
+When you merge a PR into `main`, the following automated workflows execute:
+1. **Pre-commit checks**: Ruff formatting, trailing whitespace, YAML validation
+2. **Linting**: Ruff linter with strict settings
+3. **Testing**: Full pytest suite with coverage reporting
+4. **Coverage update**: Coverage badge and report committed to this README
+5. **Semantic release**: Automatic version bump based on commit message (feat → minor, fix → patch, BREAKING CHANGE → major)
+6. **Build & publish**: Wheel file built and attached to GitHub Release
+
+### GitHub Repository Setup
+
+To enable CI/CD, you must configure your GitHub repository with a Personal Access Token.
+
+> **⚠️ Important: Run Pre-commit Locally First!**
+>
+> Before creating your first PR, install and run pre-commit locally to avoid CI failures:
+> ```bash
+> uv pip install --system pre-commit
+> pre-commit install
+> pre-commit run --all-files  # This will auto-fix formatting issues
+> git add -u && git commit -m "chore: apply pre-commit fixes"
+> ```
+>
+> **Why:** Cookiecutter templates may have trailing whitespace or missing EOF newlines. Pre-commit auto-fixes these, but if not run locally first, your initial CI run will fail.
+
+#### Step 1: Create the Release Token (PAT)
+
+The workflow needs a Personal Access Token (PAT) to push commits, tags, and releases to your protected `main` branch.
+
+**Create a Fine-Grained PAT (Recommended):**
+
+1. Go to [GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens](https://github.com/settings/tokens?type=beta)
+2. Click **"Generate new token"**
+3. Configure the token:
+   - **Token name:** `RELEASE_TOKEN_{{cookiecutter.project_name}}`
+   - **Expiration:** 90 days (set a reminder to rotate)
+   - **Repository access:** Select "Only select repositories" → Choose:
+     - ✅ `{{cookiecutter.github_username}}/{{cookiecutter.project_name}}` (this repository)
+   - **Permissions:**
+     - **Contents:** Read and write (for pushing commits, tags, and releases)
+     - **Metadata:** Read-only (automatically selected)
+4. Click **"Generate token"**
+5. **Copy the token immediately** - you won't see it again!
+
+**Alternative: Classic PAT**
+
+1. Go to [GitHub Settings → Personal access tokens → Tokens (classic)](https://github.com/settings/tokens)
+2. Click **"Generate new token (classic)"**
+3. Configure:
+   - **Note:** `RELEASE_TOKEN_{{cookiecutter.project_name}}`
+   - **Expiration:** Set an appropriate duration
+   - **Scopes:** Select `repo` (full control of private repositories)
+4. Click **"Generate token"** and copy it
+
+#### Step 2: Add Token as Repository Secret
+
+1. Go to your repository → **Settings → Secrets and variables → Actions**
+2. Click **"New repository secret"**
+3. Configure:
+   - **Name:** `RELEASE_TOKEN`
+   - **Secret:** Paste your copied PAT
+4. Click **"Add secret"**
+
+#### Step 3: Configure Branch Protection with Rulesets
+
+1. Go to your repository → **Settings → Rules → Rulesets**
+2. Click **"New ruleset"** → **"New branch ruleset"**
+3. Configure the ruleset:
+   - **Ruleset name:** `Protect main`
+   - **Enforcement status:** Active
+   - **Target branches:** Click "Add target" → "Include by pattern" → enter `main`
+
+4. Enable these rules:
+   - ✅ **Restrict deletions** - Prevent branch deletion
+   - ✅ **Require a pull request before merging**
+     - Required approvals: `1` (or more)
+     - ✅ Dismiss stale pull request approvals when new commits are pushed
+     - ✅ Require conversation resolution before merging
+   - ✅ **Require status checks to pass**
+     - ✅ Require branches to be up to date before merging
+     - Add status checks (these come from the reusable CI workflow):
+       - `ci / Run Pre-commit Checks` - Pre-commit hooks
+       - `ci / Lint with Ruff` - Ruff linting
+       - `ci / Run Tests with Pytest` - Pytest test suite
+   - ✅ **Block force pushes**
+
+5. Click **"Create"**
+
+> **Note:** The checks appear as `ci / <job-name>` because they run inside the reusable workflow. You may need to run the workflow once before these checks appear in the dropdown.
 
 ### Commit Message Format
 

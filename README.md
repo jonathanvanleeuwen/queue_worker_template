@@ -270,7 +270,7 @@ Protect the `main` branch to enforce quality gates:
      - ✅ Require approvals: 1 (or more)
    - ✅ **Require status checks to pass before merging**
      - ✅ Require branches to be up to date before merging
-     - Search for and select: `test` (once it runs the first time)
+     - Search for and select: `ci / Run Pre-commit Checks`, `ci / Lint with Ruff`, `ci / Run Tests with Pytest` (once the workflow runs the first time)
    - ✅ **Require conversation resolution before merging**
    - ✅ **Do not allow bypassing the above settings**
 4. Click **"Create"**
