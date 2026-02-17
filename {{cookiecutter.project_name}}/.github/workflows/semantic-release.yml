@@ -1,0 +1,133 @@
+name: Release Pipeline - Coverage, Versioning, and Package Distribution
+
+on:
+    pull_request:
+        branches:
+            - main
+        types: [closed]
+
+# Permissions for GITHUB_TOKEN (used for releases, not pushing)
+permissions:
+    contents: write
+    pull-requests: read
+
+jobs:
+    coverage-report:
+        name: Generate and Update Coverage Report
+        if: ${{ github.event.pull_request.merged }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository with full history
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.RELEASE_TOKEN }} # PAT for pushing to protected branch
+
+            - name: Set up Python 3.12
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install test dependencies and package
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install uv
+                  uv pip install --system -e ".[dev]"
+
+            - name: Run tests and generate coverage report (all files)
+              run: |
+                  pytest --junitxml=pytest.xml --cov=src/{{cookiecutter.project_name}} --cov-report=term-missing --cov-report=xml:coverage.xml tests/ | tee pytest-coverage.txt
+
+            - name: Extract coverage data for README badge
+              id: coverageComment
+              uses: MishaKav/pytest-coverage-comment@main
+              with:
+                  hide-comment: true
+                  pytest-coverage-path: ./pytest-coverage.txt
+                  junitxml-path: ./pytest.xml
+
+            - name: Update README with coverage badge HTML
+              run: |
+                  sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n${{ steps.coverageComment.outputs.coverageHtml }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
+
+            - name: Clean up temporary coverage files
+              run: rm ./pytest-coverage.txt ./pytest.xml ./coverage.xml
+
+            - name: Commit and push updated README with coverage
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  git add README.md
+                  git diff --staged --quiet || git commit -m "docs: update coverage report in README [skip ci]"
+                  git push
+
+    semantic-release:
+        name: Create New Version Tag via Semantic Release
+        needs: coverage-report
+        if: ${{ github.event.pull_request.merged }}
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository with full history
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.RELEASE_TOKEN }} # PAT for pushing to protected branch
+
+            - name: Pull latest changes from main
+              run: git pull
+
+            - name: Set up Python 3.12
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install python-semantic-release
+              run: pip install python-semantic-release
+
+            - name: Analyze commits and create version tag
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  semantic-release version
+              env:
+                  GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+    build-and-publish:
+        name: Build Wheel and Publish to GitHub Release
+        needs: semantic-release
+        if: ${{ github.event.pull_request.merged }}
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository with full history
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Set up Python 3.12
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install build tools
+              run: pip install build
+
+            - name: Build wheel
+              run: python -m build
+
+            - name: Get version
+              id: version
+              run:
+                  echo "version=$(python -c 'import tomllib;
+                  print(tomllib.load(open(\"pyproject.toml\",
+                  \"rb\"))[\"project\"][\"version\"])')" >> $GITHUB_OUTPUT
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: dist/*
+                  tag_name: v${{ steps.version.outputs.version }}
+                  generate_release_notes: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,77 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: {{cookiecutter.project_name}}_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{cookiecutter.project_name}}_api
+    environment:
+      PORT: ${PORT:-8000}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      LOG_LEVEL_CONSOLE: ${LOG_LEVEL_CONSOLE:-INFO}
+      LOG_LEVEL_FILE: ${LOG_LEVEL_FILE:-DEBUG}
+      API_KEYS: ${API_KEYS}
+      OAUTH_PROVIDER: ${OAUTH_PROVIDER:-github}
+      OAUTH_SECRET_KEY: ${OAUTH_SECRET_KEY:-your-secret-key-min-32-chars-change-in-production}
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:-}
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/opt/app-root/logs
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_NAMES: ${QUEUE_NAMES:-default high low}
+      LOG_LEVEL_CONSOLE: ${LOG_LEVEL_CONSOLE:-INFO}
+      LOG_LEVEL_FILE: ${LOG_LEVEL_FILE:-DEBUG}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/opt/app-root/logs
+    deploy:
+      replicas: ${WORKER_COUNT:-2}
+    restart: unless-stopped
+
+  dashboard:
+    image: eoranged/rq-dashboard:latest
+    container_name: {{cookiecutter.project_name}}_dashboard
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://redis:6379/${REDIS_DB:-0}
+    ports:
+      - "${DASHBOARD_PORT:-9181}:9181"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:

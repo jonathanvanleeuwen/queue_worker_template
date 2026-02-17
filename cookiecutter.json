@@ -1,0 +1,6 @@
+{
+    "project_name": "example_queue_worker",
+    "my_name": "my_name",
+    "github_username": "my_github_username",
+    "app_description": "Queue worker with FastAPI, RQ, and Redis"
+}

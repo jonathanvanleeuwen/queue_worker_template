@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+ENV APP_NAME="{{cookiecutter.project_name}}"
+
+# Copy dependency files
+COPY src /opt/app-root/src
+COPY pyproject.toml /opt/app-root/
+COPY entrypoint_worker.sh /entrypoint_worker.sh
+
+# Install Git and redis-tools (for health checks)
+RUN apt-get update && \
+    apt-get install -y git redis-tools && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+WORKDIR /opt/app-root/
+
+# Install dependencies
+RUN uv pip install --system -e .
+
+# Create logs directory
+RUN mkdir -p /opt/app-root/logs
+
+# Health check - verify Redis connection
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} ping || exit 1
+
+ENTRYPOINT ["/entrypoint_worker.sh"]
+
+# docker build -f Dockerfile.worker -t {{cookiecutter.project_name}}-worker:latest .
