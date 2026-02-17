@@ -38,7 +38,7 @@ Cookiecutter template:
 * Install cookiecutter using uv (or pip)
   * `uv pip install cookiecutter` (or `pip install cookiecutter`)
 * Run the cookiecutter template from this GitHub repo
-  * `cookiecutter https://github.com/YOUR_USERNAME/queue_worker_template`
+  * `cookiecutter https://github.com/jonathanvanleeuwen/queue_worker_template`
 * Fill in your new application values (including your GitHub username for CODEOWNERS)
 * Create new virtual environment
   *  `uv venv .venv` (or `python -m venv .venv`)
@@ -391,11 +391,11 @@ BREAKING CHANGE: Queue names must now use snake_case"
 def my_new_task(param1: str, param2: int) -> dict:
     """
     Brief description of what this task does.
-    
+
     Args:
         param1: Description of param1
         param2: Description of param2
-    
+
     Returns:
         Dict with task results
     """
