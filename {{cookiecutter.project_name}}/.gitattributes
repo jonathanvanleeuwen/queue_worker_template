@@ -1,0 +1,14 @@
+# Force LF line endings for shell scripts (prevents Windows CRLF issues in Docker)
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+entrypoint_worker.sh text eol=lf
+
+# Standard Git attributes
+* text=auto
+*.py text
+*.md text
+*.txt text
+*.json text
+*.toml text
+*.yml text
+*.yaml text

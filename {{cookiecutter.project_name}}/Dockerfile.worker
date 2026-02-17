@@ -7,6 +7,9 @@ COPY src /opt/app-root/src
 COPY pyproject.toml /opt/app-root/
 COPY entrypoint_worker.sh /entrypoint_worker.sh
 
+# Make entrypoint executable
+RUN chmod +x /entrypoint_worker.sh
+
 # Install Git and redis-tools (for health checks)
 RUN apt-get update && \
     apt-get install -y git redis-tools && \

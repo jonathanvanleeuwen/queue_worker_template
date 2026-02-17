@@ -113,18 +113,19 @@
    ```bash
    cd {{cookiecutter.project_name}}
    ```
-
-2. **Start all services:**
+2. **Create .env file**
+    * Rename the `.env.example` to `.env`
+3. **Start all services:**
    ```bash
    docker-compose up --build -d
    ```
 
-3. **Access the services:**
+4. **Access the services:**
    - **API Swagger UI:** http://localhost:8000/docs
    - **RQ Dashboard:** http://localhost:9181
    - **Health Check:** http://localhost:8000/health
 
-4. **Test job submission** (using default API key `test`):
+5. **Test job submission** (using default API key `test`):
    ```bash
    curl -X POST "http://localhost:8000/api/jobs/enqueue" \
      -H "Authorization: Bearer test" \
@@ -138,13 +139,13 @@
      }'
    ```
 
-5. **Check job status:**
+6. **Check job status:**
    ```bash
    curl -X GET "http://localhost:8000/api/jobs/{job_id}/status" \
      -H "Authorization: Bearer test"
    ```
 
-6. **Get job result:**
+7. **Get job result:**
    ```bash
    curl -X GET "http://localhost:8000/api/jobs/{job_id}/result" \
      -H "Authorization: Bearer test"

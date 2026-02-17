@@ -10,6 +10,9 @@ COPY src /opt/app-root/src
 COPY pyproject.toml /opt/app-root/
 COPY entrypoint.sh /entrypoint.sh
 
+# Make entrypoint executable
+RUN chmod +x /entrypoint.sh
+
 # Install Git (required for uv to install lib_auth from GitHub)
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
