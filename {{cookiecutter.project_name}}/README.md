@@ -179,10 +179,22 @@
    docker run -d -p 6379:6379 redis:7-alpine
    ```
 
-5. **Run development server:**
+5. **Run development server** (terminal 1):
    ```bash
    python dev_server.py
    ```
+
+6. **Run the worker** (terminal 2) to process enqueued jobs:
+   ```bash
+   python dev_worker.py
+   ```
+
+   The worker imports task functions directly from the installed package
+   (`{{cookiecutter.project_name}}.workers.tasks`). It connects to the same local Redis
+   instance and continuously polls for new jobs.
+
+   Open additional terminals and repeat the command to run multiple workers in
+   parallel.
 
 ### Run Tests
 
@@ -561,6 +573,8 @@ git commit -m "feat: add support for priority queues"
 ├── docker-compose.yml         # Multi-container setup
 ├── Dockerfile                 # API container
 ├── Dockerfile.worker          # Worker container
+├── dev_server.py              # Local development API server
+├── dev_worker.py              # Local development worker process
 ├── pyproject.toml             # Dependencies & config
 ├── .env                       # Environment variables
 └── README.md                  # This file
